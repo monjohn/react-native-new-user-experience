@@ -15,13 +15,13 @@ const { width, height } = Dimensions.get('window')
 interface Step {
   label: string
   reference: any
+  buttonText: string
 }
 
 interface Props {
   steps: Step[]
   backgroundColor: string
   radius: number
-  justifyContent: 'flex-start' | 'flex-end'
 }
 
 interface State {
@@ -37,14 +37,13 @@ export default class NewUserExperience extends Component<Props, State> {
   }
   x = new Animated.Value(0)
   y = new Animated.Value(0)
-  r = new Animated.Value(0)
+  r = new Animated.Value(10)
   opacity = new Animated.Value(0)
 
   state = {
     index: -1,
     ready: false,
     measurements: [],
-    justifyContent: 'flex-end',
   }
 
   componentDidMount() {
@@ -54,21 +53,44 @@ export default class NewUserExperience extends Component<Props, State> {
         Promise.all(
           resolvedRefs.map((resolved) => {
             const ref = resolved.current || resolved
+            if (!ref) return Promise.reject()
             return measure(ref)
           }),
         )
           .then((measurements) => {
             this.setState({ ready: true, measurements })
           })
-          .then(this.nextStep)
+          .then(this.initialNextStep)
           .catch((e) => console.warn(e)),
       )
       .catch((e) => console.warn(e))
+  }
 
-    // this.y.addListener(({ value }) => {
-    //   const justifyContent = value < 400 ? 'flex-end' : 'flex-start'
-    //   this.setState({ justifyContent })
-    // })
+  initialNextStep = async () => {
+    const { x, y, opacity, r } = this
+    const { index, measurements } = this.state
+    if (index + 1 >= this.props.steps.length) {
+      this.setState({ index: -1 })
+    } else {
+      const { x: stepX, height, width, y: stepY } = measurements[index + 1]
+
+      const computed = this.computedRadius(height, width)
+      x.setValue(stepX + width / 2)
+      y.setValue(stepY + height / 2)
+      Animated.sequence([
+        Animated.timing(r, {
+          toValue: computed,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 1000,
+        }),
+      ]).start()
+      this.setState({ index: index + 1 })
+    }
   }
 
   nextStep = async () => {
@@ -80,11 +102,12 @@ export default class NewUserExperience extends Component<Props, State> {
       const { x: stepX, height, width, y: stepY } = measurements[index + 1]
 
       const computed = this.computedRadius(height, width)
-      this.setState({ index: index + 1 })
+      opacity.setValue(0)
       Animated.sequence([
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: 1000,
+        Animated.timing(r, {
+          toValue: 10,
+          duration: 500,
+          useNativeDriver: true,
         }),
         Animated.parallel([
           Animated.timing(x, {
@@ -97,18 +120,21 @@ export default class NewUserExperience extends Component<Props, State> {
             duration: 500,
             useNativeDriver: true,
           }),
+        ]),
+        Animated.parallel([
           Animated.timing(r, {
             toValue: computed,
-            duration: 900,
+            duration: 500,
             useNativeDriver: true,
           }),
-        ]),
 
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 1000,
-        }),
+          Animated.timing(opacity, {
+            toValue: 1,
+            duration: 1000,
+          }),
+        ]),
       ]).start()
+      this.setState({ index: index + 1 })
     }
   }
 
@@ -116,7 +142,7 @@ export default class NewUserExperience extends Component<Props, State> {
     Math.min(Math.hypot(objHeight, objWidth) / 2, width / 2)
 
   render() {
-    const { index, ready, justifyContent } = this.state
+    const { index, ready, measurements } = this.state
     if (!ready || index === -1) {
       return null
     }
@@ -127,6 +153,9 @@ export default class NewUserExperience extends Component<Props, State> {
     const overlayAnimation = {
       transform: [{ translateX: x }, { translateY: y }, { scale: r }],
     }
+
+    const { y: stepY } = measurements[index]
+    const justifyContent = stepY > height / 2 ? 'flex-start' : 'flex-end'
 
     return (
       <Fragment>
@@ -163,7 +192,7 @@ export default class NewUserExperience extends Component<Props, State> {
             <Text style={styles.label}>{step ? step.label : ''}</Text>
             <TouchableWithoutFeedback onPress={this.nextStep}>
               <View style={styles.button}>
-                <Text style={styles.label}>Got it</Text>
+                <Text style={styles.label}>{step.buttonText || 'Got it'}</Text>
               </View>
             </TouchableWithoutFeedback>
           </SafeAreaView>
@@ -207,6 +236,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'flex-end',
     padding: 50,
+    paddingTop: 70,
   },
   button: {
     borderWidth: 2,
