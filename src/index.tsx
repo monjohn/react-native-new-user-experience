@@ -15,7 +15,7 @@ const { width, height } = Dimensions.get('window')
 interface Step {
   label: string
   reference: any
-  buttonText: string
+  buttonText?: string
 }
 
 interface Props {
@@ -28,6 +28,7 @@ interface State {
   index: number
   ready: boolean
   measurements: Position[]
+  loading: boolean
 }
 
 export default class NewUserExperience extends Component<Props, State> {
@@ -47,23 +48,27 @@ export default class NewUserExperience extends Component<Props, State> {
   }
 
   componentDidMount() {
-    const refs = this.props.steps.map((step) => step.reference)
-    Promise.all(refs)
-      .then((resolvedRefs) =>
-        Promise.all(
-          resolvedRefs.map((resolved) => {
-            const ref = resolved.current || resolved
-            if (!ref) return Promise.reject()
-            return measure(ref)
-          }),
-        )
-          .then((measurements) => {
-            this.setState({ ready: true, measurements })
-          })
-          .then(this.initialNextStep)
-          .catch((e) => console.warn(e)),
-      )
-      .catch((e) => console.warn(e))
+    const refs = this.props.steps.map(step => step.reference)
+    Promise.all(
+      refs.map(async (resolved, index) => {
+        const ref = resolved.current // || resolved
+        if (!!ref) {
+          console.log('ref', ref)
+          return measure(ref)
+        } else {
+          return Promise.reject(
+            `NewUserExperience: Invalid reference for Step #${index} with label of "${
+              this.props.steps[index].label
+            }"`
+          )
+        }
+      })
+    )
+      .then(measurements => {
+        this.setState({ ready: true, measurements })
+      })
+      .then(this.initialNextStep)
+      .catch(e => console.warn(e))
   }
 
   initialNextStep = async () => {
@@ -162,26 +167,26 @@ export default class NewUserExperience extends Component<Props, State> {
         <Animated.View style={[styles.container]}>
           <Svg height={height} width={width}>
             <Defs>
-              <Mask id='myMask' x='0' y='0' height={height} width={width}>
-                <Rect height={height} width={width} fill='white' />
+              <Mask id="myMask" x="0" y="0" height={height} width={width}>
+                <Rect height={height} width={width} fill="white" />
                 <AnimatedCircle
                   cx={0}
                   cy={0}
                   r={1}
-                  fill='black'
+                  fill="black"
                   style={overlayAnimation}
                 />
               </Mask>
             </Defs>
 
             <Rect
-              x='0'
-              y='0'
+              x="0"
+              y="0"
               width={width}
               height={height}
-              fill='black'
-              opacity='0.8'
-              mask='url(#myMask)'
+              fill="black"
+              opacity="0.8"
+              mask="url(#myMask)"
             />
           </Svg>
         </Animated.View>
@@ -210,7 +215,7 @@ interface Position {
 }
 
 const measure = (ref: View | Text): Promise<Position> => {
-  return new Promise((resolve) =>
+  return new Promise(resolve =>
     requestAnimationFrame(() =>
       ref.measureInWindow((x, y, width, height) =>
         resolve({
@@ -218,9 +223,9 @@ const measure = (ref: View | Text): Promise<Position> => {
           y,
           width,
           height,
-        }),
-      ),
-    ),
+        })
+      )
+    )
   )
 }
 
