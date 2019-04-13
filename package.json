@@ -2,9 +2,10 @@
   "name": "react-native-new-user-experience",
   "version": "0.1.0",
   "description": "A React Native component to walk through new features of your app",
-  "main": "src/index.js",
+  "main": "lib/commonjs/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "bob build"
   },
   "author": "Monte Johnston",
   "license": "MIT",
@@ -18,11 +19,33 @@
     "walkthrough"
   ],
   "devDependencies": {
+    "@react-native-community/bob": "^0.3.3",
     "metro-react-native-babel-preset": "^0.53.1"
   },
   "peerDependencies": {
     "react": "^16.8.6",
     "react-native": "^0.59.2",
     "react-native-svg": "^9.3.6"
+  },
+  "react-native": "src/index.tsx",
+  "module": "lib/module/index.js",
+  "types": "lib/typescript/src/index.d.ts",
+  "files": [
+    "src",
+    "lib"
+  ],
+  "@react-native-community/bob": {
+    "source": "src",
+    "output": "lib",
+    "targets": [
+      [
+        "commonjs",
+        {
+          "flow": true
+        }
+      ],
+      "module",
+      "typescript"
+    ]
   }
 }
