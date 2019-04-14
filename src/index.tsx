@@ -53,7 +53,6 @@ export default class NewUserExperience extends Component<Props, State> {
       refs.map(async (resolved, index) => {
         const ref = resolved.current // || resolved
         if (!!ref) {
-          console.log('ref', ref)
           return measure(ref)
         } else {
           return Promise.reject(
